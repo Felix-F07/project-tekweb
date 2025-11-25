@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Warnet Online System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-dark text-light">
+    <div class="container d-flex justify-content-center align-items-center vh-100" id="login-page">
+        <div class="card p-4 shadow-lg login-card">
+            <div class="text-center mb-4">
+                <h2 class="fw-bold text-primary">WARNET ONLINE</h2>
+                <p class="text-muted">Login Member / Admin</p>
+            </div>
+            <form id="form-login">
+                <div class="mb-3">
+                    <label class="form-label text-dark fw-bold">Username</label>
+                    <input type="text" class="form-control" id="username" placeholder="Masukkan username" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-dark fw-bold">Password</label>
+                    <input type="password" class="form-control" id="password" placeholder="Masukkan password" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100 py-2">MASUK SEKARANG</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="container mt-5" id="dashboard-page" style="display: none;">
+        <nav class="d-flex justify-content-between align-items-center mb-4 border-bottom border-secondary pb-3">
+            <h3 class="text-primary fw-bold">WARNET SYSTEM</h3>
+            <button class="btn btn-danger btn-sm btn-logout">Logout</button>
+        </nav>
+
+        <div class="row">
+            <div class="col-md-7 mb-3">
+                <div class="card bg-secondary text-white shadow h-100">
+                    <div class="card-body text-center d-flex flex-column justify-content-center">
+                        <h5 class="card-title">Halo, <span id="display-username" class="fw-bold text-warning">User</span>!</h5>
+                        <p class="card-text mt-2">Sisa Waktu Billing Anda:</p>
+                        
+                        <h1 id="timer" class="display-1 fw-bold my-3">Loading...</h1>
+                        
+                        <div id="alert-box" class="mt-2"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-5">
+                <div class="card text-dark shadow">
+                    <div class="card-header bg-warning fw-bold">Beli Paket Tambahan</div>
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="fw-bold">Paket 1 Jam</span><br>
+                                    <small class="text-muted">Rp 5.000</small>
+                                </div>
+                                <button class="btn btn-outline-primary btn-sm btn-beli" data-id="1">Beli</button>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="fw-bold">Paket 2 Jam</span><br>
+                                    <small class="text-muted">Rp 10.000</small>
+                                </div>
+                                <button class="btn btn-outline-primary btn-sm btn-beli" data-id="2">Beli</button>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="fw-bold">Paket 5 Jam</span><br>
+                                    <small class="text-muted">Rp 20.000</small>
+                                </div>
+                                <button class="btn btn-outline-primary btn-sm btn-beli" data-id="3">Beli</button>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container mt-5" id="admin-page" style="display: none;">
+        <nav class="d-flex justify-content-between align-items-center mb-4 border-bottom border-secondary pb-3">
+            <h3 class="text-danger fw-bold">ADMIN PANEL</h3>
+            <button class="btn btn-light btn-sm btn-logout">Logout</button>
+        </nav>
+
+        <div class="card shadow border-danger">
+            <div class="card-header bg-danger text-white fw-bold">
+                Manajemen User & Billing
+            </div>
+            <div class="card-body text-dark">
+                <p class="card-text">Selamat Datang, Admin! Anda memiliki akses penuh.</p>
+                <div class="alert alert-secondary">
+                    Fitur CRUD User dan Monitoring PC akan tampil di sini.
+                </div>
+                </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="script.js"></script>
+
+</body>
+</html>
