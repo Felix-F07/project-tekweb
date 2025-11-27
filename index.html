@@ -52,29 +52,22 @@
                 <div class="card text-dark shadow">
                     <div class="card-header bg-warning fw-bold">Beli Paket Tambahan</div>
                     <div class="card-body">
-                        <ul class="list-group list-group-flush">
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <div>
-                                    <span class="fw-bold">Paket 1 Jam</span><br>
-                                    <small class="text-muted">Rp 5.000</small>
-                                </div>
-                                <button class="btn btn-outline-primary btn-sm btn-beli" data-id="1">Beli</button>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <div>
-                                    <span class="fw-bold">Paket 2 Jam</span><br>
-                                    <small class="text-muted">Rp 10.000</small>
-                                </div>
-                                <button class="btn btn-outline-primary btn-sm btn-beli" data-id="2">Beli</button>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <div>
-                                    <span class="fw-bold">Paket 5 Jam</span><br>
-                                    <small class="text-muted">Rp 20.000</small>
-                                </div>
-                                <button class="btn btn-outline-primary btn-sm btn-beli" data-id="3">Beli</button>
-                            </li>
+                        <ul id="paket-list" class="list-group list-group-flush">
+                            <li class="list-group-item text-center text-muted">Memuat paket...</li>
                         </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- History Pembelian (User Only) -->
+        <div class="row mt-4" id="history-row">
+            <div class="col-12">
+                <div class="card shadow">
+                    <div class="card-header bg-dark text-white fw-bold">History Pembelian Paket</div>
+                    <div class="card-body">
+                        <div id="purchase-history">
+                            <p class="text-muted">Belum ada riwayat pembelian.</p>
+                        </div>
                     </div>
                 </div>
             </div>
