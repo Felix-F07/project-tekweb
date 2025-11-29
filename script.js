@@ -38,6 +38,10 @@ $(document).ready(function() {
                     if(response.status === 'success') {
                         sisaDetik = parseInt(response.billing_seconds);
                         mulaiTimer();
+                        
+                        // Ambil paket dari DB dan riwayat pembelian untuk user ini
+                        fetchPaketBilling();
+                        fetchPurchaseHistory(userData.username);
                     }
                 }
             });
@@ -84,29 +88,32 @@ $(document).ready(function() {
     // ==========================================
     // 2. LOGIC BELI PAKET (TOP UP)
     // ==========================================
-    $('.btn-beli').click(function() {
-        let paketID = $(this).data('id');
-        let tambahDetik = 0;
-        if(paketID == 1) tambahDetik = 3600;
-        if(paketID == 2) tambahDetik = 7200;
-        if(paketID == 3) tambahDetik = 18000;
-
+    // Delegate click untuk tombol beli yang dibuat dinamis
+    $(document).on('click', '.btn-beli', function() {
+        let paketID = $(this).data('paket-id');
         let currentUser = $('#display-username').text();
+
+        if(!paketID) return alert('ID paket tidak ditemukan.');
 
         if(confirm("Yakin ingin membeli paket ini?")) {
             $.ajax({
                 url: 'api/buy.php',
                 type: 'POST',
-                data: { username: currentUser, seconds: tambahDetik },
+                data: { username: currentUser, paket_id: paketID },
                 dataType: 'json',
                 success: function(response) {
                     if(response.status === 'success') {
                         alert("✅ " + response.message);
                         sisaDetik = parseInt(response.new_time);
                         updateTampilanWaktu(); 
+                        // Refresh history setelah pembelian
+                        fetchPurchaseHistory(currentUser);
                     } else {
                         alert("❌ Gagal: " + response.message);
                     }
+                },
+                error: function() {
+                    alert('Gagal koneksi ke server saat membeli paket.');
                 }
             });
         }
@@ -173,6 +180,102 @@ $(document).ready(function() {
             $('#timer').removeClass('blink-red');
             $('#alert-box').empty();
         }
+    }
+
+    // ==========================================
+    // 5. FETCH & RENDER HISTORY PEMBELIAN
+    // ==========================================
+    function fetchPurchaseHistory(username) {
+        $.ajax({
+            url: 'api/history.php',
+            type: 'POST',
+            data: { username: username },
+            dataType: 'json',
+            success: function(response) {
+                if(response.status === 'success') {
+                    renderHistory(response.data);
+                } else {
+                    $('#purchase-history').html('<p class="text-muted">Tidak ada riwayat pembelian.</p>');
+                }
+            },
+            error: function() {
+                $('#purchase-history').html('<p class="text-danger">Gagal memuat riwayat.</p>');
+            }
+        });
+    }
+
+    function renderHistory(items) {
+        if(!items || items.length === 0) {
+            $('#purchase-history').html('<p class="text-muted">Belum ada riwayat pembelian.</p>');
+            return;
+        }
+
+        let html = '<ul class="list-group">';
+        items.forEach(function(it) {
+            html += '<li class="list-group-item d-flex justify-content-between align-items-start">'
+                + '<div>'
+                + '<div class="fw-bold">' + escapeHtml(it.paket_name) + '</div>'
+                + (it.paket_description ? '<div><small class="text-muted">' + escapeHtml(it.paket_description) + '</small></div>' : '')
+                + '<div><small class="text-muted">' + escapeHtml(it.created_at) + '</small></div>'
+                + '</div>'
+                + '<div class="text-end">Rp ' + formatPrice(it.price) + '</div>'
+                + '</li>';
+        });
+        html += '</ul>';
+
+        $('#purchase-history').html(html);
+    }
+
+    function formatPrice(val) {
+        if(val === null || val === undefined) return '-';
+        return Number(val).toLocaleString('id-ID');
+    }
+
+    // Very small helper to avoid XSS when inserting text
+    function escapeHtml(text) {
+        return $('<div/>').text(text).html();
+    }
+
+    // ==========================================
+    // 6. FETCH PAKET BILLING DARI DATABASE
+    // ==========================================
+    function fetchPaketBilling() {
+        $.ajax({
+            url: 'api/paket.php',
+            type: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                if(response.status === 'success') {
+                    renderPaketList(response.data);
+                } else {
+                    $('#paket-list').html('<li class="list-group-item text-danger">Gagal memuat paket.</li>');
+                }
+            },
+            error: function() {
+                $('#paket-list').html('<li class="list-group-item text-danger">Gagal terhubung ke server.</li>');
+            }
+        });
+    }
+
+    function renderPaketList(items) {
+        if(!items || items.length === 0) {
+            $('#paket-list').html('<li class="list-group-item text-muted">Tidak ada paket tersedia.</li>');
+            return;
+        }
+
+        let html = '';
+        items.forEach(function(it) {
+            html += '<li class="list-group-item d-flex justify-content-between align-items-center">'
+                + '<div>'
+                + '<div class="fw-bold">' + escapeHtml(it.paket_name) + '</div>'
+                + (it.description ? '<div><small class="text-muted">' + escapeHtml(it.description) + '</small></div>' : '')
+                + '<div><small class="text-muted mt-1">Rp ' + formatPrice(it.price) + '</small></div>'
+                + '</div>'
+                + '<button class="btn btn-outline-primary btn-sm btn-beli" data-paket-id="' + it.id + '">Beli</button>'
+                + '</li>';
+        });
+
+        $('#paket-list').html(html);
     }
 
     // ==========================================
