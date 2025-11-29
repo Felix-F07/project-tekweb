@@ -7,14 +7,25 @@ $database = new Database();
 $db = $database->getConnection();
 
 try {
-    $query = "SELECT id, name as paket_name, price, seconds, description FROM paket_billing ORDER BY seconds ASC";
+    // Ambil semua paket yang tersedia dari database
+    // Kita ganti nama kolom biar sesuai sama javascript temanmu (id, name, price, description)
+    $query = "SELECT id, name AS paket_name, price, seconds, description FROM paket_billing ORDER BY price ASC";
     $stmt = $db->prepare($query);
     $stmt->execute();
-    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    $num = $stmt->rowCount();
 
-    echo json_encode(["status" => "success", "data" => $rows]);
-} catch (Exception $e) {
-    echo json_encode(["status" => "error", "message" => "Gagal memuat paket."]);
+    if($num > 0) {
+        $products_arr = array();
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)){
+            array_push($products_arr, $row);
+        }
+        // Kirim data JSON
+        echo json_encode(["status" => "success", "data" => $products_arr]);
+    } else {
+        echo json_encode(["status" => "error", "message" => "Tidak ada paket ditemukan."]);
+    }
+} catch(PDOException $e) {
+    echo json_encode(["status" => "error", "message" => "Database error: " . $e->getMessage()]);
 }
-
 ?>

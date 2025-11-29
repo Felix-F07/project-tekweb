@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-dark text-light">
+
     <div class="container d-flex justify-content-center align-items-center vh-100" id="login-page">
         <div class="card p-4 shadow-lg login-card">
             <div class="text-center mb-4">
@@ -49,24 +50,26 @@
             </div>
 
             <div class="col-md-5">
-                <div class="card text-dark shadow">
+                <div class="card text-dark shadow h-100">
                     <div class="card-header bg-warning fw-bold">Beli Paket Tambahan</div>
-                    <div class="card-body">
-                        <ul id="paket-list" class="list-group list-group-flush">
-                            <li class="list-group-item text-center text-muted">Memuat paket...</li>
+                    <div class="card-body p-0">
+                        <ul class="list-group list-group-flush" id="paket-list">
+                            <li class="list-group-item text-center text-muted py-3">Memuat paket...</li>
                         </ul>
                     </div>
                 </div>
             </div>
         </div>
-        <!-- History Pembelian (User Only) -->
-        <div class="row mt-4" id="history-row">
+
+        <div class="row mt-4">
             <div class="col-12">
-                <div class="card shadow">
-                    <div class="card-header bg-dark text-white fw-bold">History Pembelian Paket</div>
-                    <div class="card-body">
-                        <div id="purchase-history">
-                            <p class="text-muted">Belum ada riwayat pembelian.</p>
+                <div class="card text-dark shadow">
+                    <div class="card-header bg-info text-white fw-bold">
+                        Riwayat Pembelian Terakhir
+                    </div>
+                    <div class="card-body p-0">
+                        <div id="purchase-history" style="max-height: 300px; overflow-y: auto;">
+                            <p class="text-center text-muted py-3">Memuat riwayat...</p>
                         </div>
                     </div>
                 </div>
@@ -75,26 +78,59 @@
     </div>
 
     <div class="container mt-5" id="admin-page" style="display: none;">
-        <nav class="d-flex justify-content-between align-items-center mb-4 border-bottom border-secondary pb-3">
+        <nav class="d-flex justify-content-between align-items-center mb-4 border-bottom border-danger pb-3">
             <h3 class="text-danger fw-bold">ADMIN PANEL</h3>
             <button class="btn btn-light btn-sm btn-logout">Logout</button>
         </nav>
 
-        <div class="card shadow border-danger">
-            <div class="card-header bg-danger text-white fw-bold">
-                Manajemen User & Billing
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="card shadow border-danger h-100">
+                    <div class="card-header bg-danger text-white fw-bold">Top Up Manual (Kasir)</div>
+                    <div class="card-body text-dark">
+                        <form id="form-topup-manual">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Username User</label>
+                                <input type="text" class="form-control" id="adm-username" placeholder="Contoh: Kenji" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Tambah Waktu (Menit)</label>
+                                <input type="number" class="form-control" id="adm-menit" placeholder="60" required>
+                            </div>
+                            <button type="submit" class="btn btn-outline-danger w-100">TAMBAHKAN WAKTU</button>
+                        </form>
+                    </div>
+                </div>
             </div>
-            <div class="card-body text-dark">
-                <p class="card-text">Selamat Datang, Admin! Anda memiliki akses penuh.</p>
-                <div class="alert alert-secondary">
-                    Fitur CRUD User dan Monitoring PC akan tampil di sini.
+
+            <div class="col-md-8">
+                <div class="card shadow">
+                    <div class="card-header bg-dark text-white fw-bold d-flex justify-content-between align-items-center">
+                        <span>Daftar User Aktif</span>
+                        <button class="btn btn-sm btn-success" onclick="loadAdminTable()">Refresh Data</button>
+                    </div>
+                    <div class="card-body p-0 text-dark">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover mb-0 text-center">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Username</th>
+                                        <th>Sisa Waktu</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-users-body">
+                                    </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
-                </div>
+            </div>
         </div>
     </div>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="script.js"></script>
-
 </body>
 </html>

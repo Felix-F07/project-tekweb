@@ -10,25 +10,28 @@ $(document).ready(function() {
     cekStatusLogin();
 
     function cekStatusLogin() {
-        // Cek Session Storage (Hilang kalau browser ditutup, Aman buat warnet)
         let savedUser = sessionStorage.getItem('warnet_user');
-        
         if(savedUser) {
             let userData = JSON.parse(savedUser);
             masukDashboard(userData);
         }
     }
 
+    // Fungsi Utama Pengatur Dashboard
     function masukDashboard(userData) {
         $('#login-page').removeClass('d-flex').hide();
 
+        // JIKA ADMIN
         if(userData.role_name === 'Admin') {
             $('#admin-page').fadeIn(300);
-        } else {
+            loadAdminTable(); // Load Tabel User
+        } 
+        // JIKA USER BIASA
+        else {
             $('#dashboard-page').fadeIn(300);
             $('#display-username').text(userData.username);
             
-            // Ambil waktu terbaru dari Database biar sinkron
+            // Ambil waktu terbaru & data lain
             $.ajax({
                 url: 'api/get_time.php',
                 type: 'POST',
@@ -38,8 +41,6 @@ $(document).ready(function() {
                     if(response.status === 'success') {
                         sisaDetik = parseInt(response.billing_seconds);
                         mulaiTimer();
-                        
-                        // Ambil paket dari DB dan riwayat pembelian untuk user ini
                         fetchPaketBilling();
                         fetchPurchaseHistory(userData.username);
                     }
@@ -69,11 +70,8 @@ $(document).ready(function() {
 
                 if(response.status === 'success') {
                     let userData = response.data;
-                    
-                    // Simpan sesi login
                     sessionStorage.setItem('warnet_user', JSON.stringify(userData));
                     masukDashboard(userData);
-
                 } else {
                     alert("Gagal: " + response.message);
                 }
@@ -86,42 +84,10 @@ $(document).ready(function() {
     });
 
     // ==========================================
-    // 2. LOGIC BELI PAKET (TOP UP)
+    // 2. LOGIC USER (TIMER & BELI)
     // ==========================================
-    // Delegate click untuk tombol beli yang dibuat dinamis
-    $(document).on('click', '.btn-beli', function() {
-        let paketID = $(this).data('paket-id');
-        let currentUser = $('#display-username').text();
-
-        if(!paketID) return alert('ID paket tidak ditemukan.');
-
-        if(confirm("Yakin ingin membeli paket ini?")) {
-            $.ajax({
-                url: 'api/buy.php',
-                type: 'POST',
-                data: { username: currentUser, paket_id: paketID },
-                dataType: 'json',
-                success: function(response) {
-                    if(response.status === 'success') {
-                        alert("✅ " + response.message);
-                        sisaDetik = parseInt(response.new_time);
-                        updateTampilanWaktu(); 
-                        // Refresh history setelah pembelian
-                        fetchPurchaseHistory(currentUser);
-                    } else {
-                        alert("❌ Gagal: " + response.message);
-                    }
-                },
-                error: function() {
-                    alert('Gagal koneksi ke server saat membeli paket.');
-                }
-            });
-        }
-    });
-
-    // ==========================================
-    // 3. LOGIC TIMER (AKURASI TINGGI)
-    // ==========================================
+    
+    // Timer dengan Auto Save per 5 Detik
     function mulaiTimer() {
         clearInterval(timerInterval);
         let currentUser = $('#display-username').text();
@@ -132,12 +98,10 @@ $(document).ready(function() {
                 updateTampilanWaktu();
                 cekNotifikasi();
 
-                // [UPDATE] AUTO SAVE SETIAP 5 DETIK
-                // Biar kalau direfresh, waktunya gak balik jauh-jauh
+                // Auto Save
                 if(sisaDetik % 5 === 0) {
-                    simpanWaktuKeDatabase(currentUser, 5); // Lapor kurangi 5 detik
+                    simpanWaktuKeDatabase(currentUser, 5);
                 }
-
             } else {
                 clearInterval(timerInterval);
                 $('#timer').text("WAKTU HABIS");
@@ -147,19 +111,11 @@ $(document).ready(function() {
         }, 1000); 
     }
 
-    // Fungsi Lapor ke Backend (Sekarang terima parameter jumlah detik)
     function simpanWaktuKeDatabase(username, jumlahDetik) {
         $.ajax({
             url: 'api/update_time.php',
             type: 'POST',
-            data: { 
-                username: username, 
-                seconds: jumlahDetik // Kirim angka 5
-            },
-            success: function(response) {
-                // Console log dimatikan biar gak nyampah di console
-                // console.log("Auto-save sukses"); 
-            }
+            data: { username: username, seconds: jumlahDetik }
         });
     }
 
@@ -182,62 +138,113 @@ $(document).ready(function() {
         }
     }
 
+    // Beli Paket (User)
+    $(document).on('click', '.btn-beli', function() {
+        let paketID = $(this).data('paket-id');
+        let currentUser = $('#display-username').text();
+
+        if(confirm("Yakin ingin membeli paket ini?")) {
+            $.ajax({
+                url: 'api/buy.php',
+                type: 'POST',
+                data: { username: currentUser, paket_id: paketID },
+                dataType: 'json',
+                success: function(response) {
+                    if(response.status === 'success') {
+                        alert("✅ " + response.message);
+                        sisaDetik = parseInt(response.new_time);
+                        updateTampilanWaktu(); 
+                        fetchPurchaseHistory(currentUser);
+                    } else {
+                        alert("❌ Gagal: " + response.message);
+                    }
+                }
+            });
+        }
+    });
+
     // ==========================================
-    // 5. FETCH & RENDER HISTORY PEMBELIAN
+    // 3. LOGIC ADMIN (CRUD & TOPUP)
     // ==========================================
-    function fetchPurchaseHistory(username) {
+
+    // Load Tabel User
+    window.loadAdminTable = function() {
         $.ajax({
-            url: 'api/history.php',
-            type: 'POST',
-            data: { username: username },
+            url: 'api/get_users.php',
+            type: 'GET',
             dataType: 'json',
             success: function(response) {
                 if(response.status === 'success') {
-                    renderHistory(response.data);
-                } else {
-                    $('#purchase-history').html('<p class="text-muted">Tidak ada riwayat pembelian.</p>');
+                    let html = '';
+                    response.data.forEach(function(u) {
+                        let jam = Math.floor(u.billing_seconds / 3600);
+                        let menit = Math.floor((u.billing_seconds % 3600) / 60);
+                        let displayTime = `${jam} Jam ${menit} Menit`;
+                        let badgeClass = u.billing_seconds > 0 ? 'bg-success' : 'bg-danger';
+
+                        html += `<tr>
+                            <td>${u.id}</td>
+                            <td class="fw-bold">${u.username}</td>
+                            <td><span class="badge ${badgeClass}">${displayTime}</span></td>
+                            <td>
+                                <button class="btn btn-sm btn-danger" onclick="hapusUser('${u.username}')">Hapus</button>
+                            </td>
+                        </tr>`;
+                    });
+                    $('#table-users-body').html(html);
                 }
-            },
-            error: function() {
-                $('#purchase-history').html('<p class="text-danger">Gagal memuat riwayat.</p>');
             }
         });
-    }
+    };
 
-    function renderHistory(items) {
-        if(!items || items.length === 0) {
-            $('#purchase-history').html('<p class="text-muted">Belum ada riwayat pembelian.</p>');
-            return;
+    // Top Up Manual Admin
+    $('#form-topup-manual').on('submit', function(e) {
+        e.preventDefault();
+        let targetUser = $('#adm-username').val();
+        let targetMenit = $('#adm-menit').val();
+
+        if(confirm(`Yakin tambah ${targetMenit} menit untuk ${targetUser}?`)) {
+            $.ajax({
+                url: 'api/admin_topup.php',
+                type: 'POST',
+                data: { username: targetUser, minutes: targetMenit },
+                dataType: 'json',
+                success: function(response) {
+                    if(response.status === 'success') {
+                        alert("✅ " + response.message);
+                        $('#adm-username').val('');
+                        $('#adm-menit').val('');
+                        loadAdminTable();
+                    } else {
+                        alert("❌ Gagal: " + response.message);
+                    }
+                }
+            });
         }
+    });
 
-        let html = '<ul class="list-group">';
-        items.forEach(function(it) {
-            html += '<li class="list-group-item d-flex justify-content-between align-items-start">'
-                + '<div>'
-                + '<div class="fw-bold">' + escapeHtml(it.paket_name) + '</div>'
-                + (it.paket_description ? '<div><small class="text-muted">' + escapeHtml(it.paket_description) + '</small></div>' : '')
-                + '<div><small class="text-muted">' + escapeHtml(it.created_at) + '</small></div>'
-                + '</div>'
-                + '<div class="text-end">Rp ' + formatPrice(it.price) + '</div>'
-                + '</li>';
-        });
-        html += '</ul>';
-
-        $('#purchase-history').html(html);
-    }
-
-    function formatPrice(val) {
-        if(val === null || val === undefined) return '-';
-        return Number(val).toLocaleString('id-ID');
-    }
-
-    // Very small helper to avoid XSS when inserting text
-    function escapeHtml(text) {
-        return $('<div/>').text(text).html();
-    }
+    // Hapus User
+    window.hapusUser = function(targetUser) {
+        if(confirm(`⚠️ PERINGATAN: Yakin hapus user '${targetUser}' permanen?`)) {
+            $.ajax({
+                url: 'api/delete_user.php',
+                type: 'POST',
+                data: { username: targetUser },
+                dataType: 'json',
+                success: function(response) {
+                    if(response.status === 'success') {
+                        alert("User berhasil dihapus.");
+                        loadAdminTable();
+                    } else {
+                        alert("Gagal menghapus user.");
+                    }
+                }
+            });
+        }
+    };
 
     // ==========================================
-    // 6. FETCH PAKET BILLING DARI DATABASE
+    // 4. HELPER FUNCTIONS (USER)
     // ==========================================
     function fetchPaketBilling() {
         $.ajax({
@@ -246,52 +253,56 @@ $(document).ready(function() {
             dataType: 'json',
             success: function(response) {
                 if(response.status === 'success') {
-                    renderPaketList(response.data);
-                } else {
-                    $('#paket-list').html('<li class="list-group-item text-danger">Gagal memuat paket.</li>');
+                    let html = '';
+                    response.data.forEach(function(it) {
+                        html += `<li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="fw-bold">${escapeHtml(it.paket_name)}</div>
+                                <div><small class="text-muted mt-1">Rp ${Number(it.price).toLocaleString('id-ID')}</small></div>
+                            </div>
+                            <button class="btn btn-outline-primary btn-sm btn-beli" data-paket-id="${it.id}">Beli</button>
+                        </li>`;
+                    });
+                    $('#paket-list').html(html);
                 }
-            },
-            error: function() {
-                $('#paket-list').html('<li class="list-group-item text-danger">Gagal terhubung ke server.</li>');
             }
         });
     }
 
-    function renderPaketList(items) {
-        if(!items || items.length === 0) {
-            $('#paket-list').html('<li class="list-group-item text-muted">Tidak ada paket tersedia.</li>');
-            return;
-        }
-
-        let html = '';
-        items.forEach(function(it) {
-            html += '<li class="list-group-item d-flex justify-content-between align-items-center">'
-                + '<div>'
-                + '<div class="fw-bold">' + escapeHtml(it.paket_name) + '</div>'
-                + (it.description ? '<div><small class="text-muted">' + escapeHtml(it.description) + '</small></div>' : '')
-                + '<div><small class="text-muted mt-1">Rp ' + formatPrice(it.price) + '</small></div>'
-                + '</div>'
-                + '<button class="btn btn-outline-primary btn-sm btn-beli" data-paket-id="' + it.id + '">Beli</button>'
-                + '</li>';
+    function fetchPurchaseHistory(username) {
+        $.ajax({
+            url: 'api/history.php',
+            type: 'POST',
+            data: { username: username },
+            dataType: 'json',
+            success: function(response) {
+                if(response.status === 'success') {
+                    let html = '<ul class="list-group">';
+                    response.data.forEach(function(it) {
+                        html += `<li class="list-group-item d-flex justify-content-between">
+                            <div>
+                                <div class="fw-bold">${escapeHtml(it.paket_name)}</div>
+                                <div><small class="text-muted">${it.created_at}</small></div>
+                            </div>
+                            <div class="text-end">Rp ${Number(it.price).toLocaleString('id-ID')}</div>
+                        </li>`;
+                    });
+                    html += '</ul>';
+                    $('#purchase-history').html(html);
+                }
+            }
         });
-
-        $('#paket-list').html(html);
     }
 
-    // ==========================================
-    // 4. LOGIC LOGOUT
-    // ==========================================
-    $('.btn-logout').click(function() {
-        forceLogout();
-    });
+    function escapeHtml(text) { return $('<div/>').text(text).html(); }
+
+    $('.btn-logout').click(function() { forceLogout(); });
 
     function forceLogout() {
-        sessionStorage.removeItem('warnet_user'); // Hapus sesi
-        
+        sessionStorage.removeItem('warnet_user');
         $('#dashboard-page').hide();
         $('#admin-page').hide();
         $('#login-page').addClass('d-flex').fadeIn(300);
-        
         $('#username').val('');
         $('#password').val('');
         clearInterval(timerInterval);
