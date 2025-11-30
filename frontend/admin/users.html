@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin - Users</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+<body>
+    <div id="navbar-container"></div>
+
+    <div class="container mt-4">
+        <h2>Daftar User</h2>
+        <button class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#addUserModal">Tambah User</button>
+        
+        <table class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Username</th>
+                    <th>Role</th>
+                    <th>Sisa Waktu</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody id="userTableBody"></tbody>
+        </table>
+    </div>
+
+    <div class="modal fade" id="addUserModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Tambah User</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button> </div>
+                <div class="modal-body">
+                    <form id="addUserForm">
+                        <div class="mb-2"><label>Username</label><input type="text" id="addUsername" class="form-control" required></div>
+                        <div class="mb-2"><label>Password</label><input type="password" id="addPassword" class="form-control" required></div>
+                        <div class="mb-2"><label>Sisa Durasi (Menit)</label><input type="number" id="addBillingMin" class="form-control" placeholder="Contoh: 60 untuk 1 jam" value="0"></div>
+                        <div class="mb-2"><label>Role</label><select id="addRole" class="form-select"><option value="1">Admin</option><option value="2">User</option></select></div>
+                        <button type="submit" class="btn btn-primary w-100">Simpan</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="editUserModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Edit User</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <form id="editUserForm">
+                        <input type="hidden" id="editId">
+                        <div class="mb-2"><label>Username</label><input type="text" id="editUsername" class="form-control" readonly></div>
+                        <div class="mb-2"><label>Sisa Durasi (Menit)</label><input type="number" id="editBillingMin" class="form-control" placeholder="Contoh: 60 untuk 1 jam" value="0"></div>
+                        <div class="mb-2"><label>Role</label><select id="editRole" class="form-select"><option value="1">Admin</option><option value="2">User</option></select></div>
+                        <div class="mb-2"><label>Reset Password (Kosongkan jika tidak ubah)</label><input type="password" id="editPassword" class="form-control" placeholder="Password Baru..."></div>
+                        <button type="submit" class="btn btn-warning w-100">Update</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function(){
+            $("#navbar-container").load("navbar.html");
+            loadUsers();
+
+            function loadUsers() {
+                $.get('../../backend/api/users.php', function(data){
+                    let rows = '';
+                    // helper to format seconds -> HH:MM:SS
+                    function formatSeconds(sec){
+                        sec = parseInt(sec) || 0;
+                        const hours = Math.floor(sec / 3600);
+                        const minutes = Math.floor((sec % 3600) / 60);
+                        const seconds = sec % 60;
+                        const hh = String(hours).padStart(2, '0');
+                        const mm = String(minutes).padStart(2, '0');
+                        const ss = String(seconds).padStart(2, '0');
+                        return `${hh}:${mm}:${ss}`;
+                    }
+
+                    data.forEach(u => {
+                        rows += `<tr>
+                            <td>${u.id}</td>
+                            <td>${u.username}</td>
+                            <td>${u.role_name}</td>
+                            <td>${formatSeconds(u.billing_seconds)}</td>
+                            <td>
+                                <button class="btn btn-warning btn-sm" onclick="openEdit(${u.id}, '${u.username}', '${u.role_name}')">Edit</button>
+                                <button class="btn btn-danger btn-sm" onclick="deleteUser(${u.id})">Del</button>
+                            </td>
+                        </tr>`;
+                    });
+                    $('#userTableBody').html(rows);
+                });
+            }
+
+            // Tambah
+            $('#addUserForm').submit(function(e){
+                e.preventDefault();
+                $.ajax({
+                    url: '../../backend/api/users.php', type: 'POST',
+                    data: JSON.stringify({
+                        username: $('#addUsername').val(),
+                        password: $('#addPassword').val(),
+                        role_id: $('#addRole').val(),
+                        billing_seconds: Math.max(0, Math.round(parseFloat($('#addBillingMin').val()||0) * 60))
+                    }),
+                    contentType: 'application/json',
+                    dataType: 'json',
+                    success: function(res){ alert(res.message); $('#addUserModal').modal('hide'); loadUsers(); }
+                });
+            });
+
+            // Buka Modal Edit
+            window.openEdit = function(id, username, roleName) {
+                $('#editId').val(id);
+                $('#editUsername').val(username);
+                $('#editRole').val(roleName === 'Admin' ? 1 : 2);
+                // Get user details to populate billing minutes
+                $.get('../../backend/api/users.php', function(list){
+                    const u = list.find(x => x.id == id);
+                    if(u){
+                        $('#editBillingMin').val(Math.round((u.billing_seconds||0)/60));
+                    }
+                });
+                $('#editPassword').val(''); 
+                $('#editUserModal').modal('show');
+            }
+
+            // Proses Edit
+            $('#editUserForm').submit(function(e){
+                e.preventDefault();
+                $.ajax({
+                    url: '../../backend/api/users.php', type: 'PUT',
+                    data: JSON.stringify({
+                        id: $('#editId').val(),
+                        role_id: $('#editRole').val(),
+                        password: $('#editPassword').val(),
+                        billing_seconds: Math.max(0, Math.round(parseFloat($('#editBillingMin').val()||0) * 60))
+                    }),
+                    contentType: 'application/json',
+                    dataType: 'json',
+                    success: function(res){ alert(res.message); $('#editUserModal').modal('hide'); loadUsers(); }
+                });
+            });
+
+            // Delete
+            window.deleteUser = function(id){
+                if(confirm('Hapus user?')) {
+                    $.ajax({ url: '../../backend/api/users.php?id='+id, type: 'DELETE', success: function(){ loadUsers(); } });
+                }
+            }
+        });
+    </script>
+</body>
+</html>

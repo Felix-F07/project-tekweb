@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Manajemen PC</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+<body>
+    <div id="navbar-container"></div>
+
+    <div class="container mt-4">
+        <h2>Manajemen PC</h2>
+        <button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#pcModal" onclick="prepareModal('add')">Tambah PC</button>
+        <table class="table table-bordered">
+            <thead><tr><th>ID</th><th>Nama PC</th><th>Status</th><th>Aksi</th></tr></thead>
+            <tbody id="pcTableBody"></tbody>
+        </table>
+    </div>
+
+    <div class="modal fade" id="pcModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title" id="modalTitle">PC</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <input type="hidden" id="pcId">
+                    <label>Nama PC</label>
+                    <input type="text" id="pcName" class="form-control" placeholder="Contoh: PC-01">
+                    <button class="btn btn-primary mt-3 w-100" id="savePCBtn">Simpan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let mode = 'add'; // 'add' atau 'edit'
+
+        $(document).ready(function(){
+            $("#navbar-container").load("navbar.html");
+            loadPCList();
+
+            function loadPCList() {
+                $.ajax({
+                    url: '../../backend/api/pcs.php',
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function(data){
+                        let rows = '';
+                        data.forEach(pc => {
+                            rows += `<tr>
+                                <td>${pc.id}</td>
+                                <td>${pc.name}</td>
+                                <td>${pc.status}</td>
+                                <td>
+                                    <button class="btn btn-warning btn-sm" onclick="prepareModal('edit', ${pc.id}, '${pc.name}')">Edit</button>
+                                    <button class="btn btn-danger btn-sm" onclick="deletePC(${pc.id})">Hapus</button>
+                                </td>
+                            </tr>`;
+                        });
+                        $('#pcTableBody').html(rows);
+                    },
+                    error: function(xhr){ console.error('Error loading PC list', xhr); }
+                });
+            }
+
+            window.prepareModal = function(action, id = null, name = '') {
+                mode = action;
+                $('#pcId').val(id);
+                $('#pcName').val(name);
+                $('#modalTitle').text(action === 'add' ? 'Tambah PC' : 'Edit Nama PC');
+                $('#pcModal').modal('show');
+            }
+
+            $('#savePCBtn').click(function(){
+                let name = $('#pcName').val();
+                let id = $('#pcId').val();
+
+                if(mode === 'add') {
+                    $.ajax({
+                        url: '../../backend/api/pcs.php',
+                        type: 'POST',
+                        data: JSON.stringify({ name: name }),
+                        contentType: 'application/json; charset=utf-8',
+                        dataType: 'json',
+                        success: function(){ $('#pcModal').modal('hide'); loadPCList(); },
+                        error: function(xhr){ alert('Gagal menambah PC'); console.error(xhr); }
+                    });
+                } else {
+                    $.ajax({
+                        url: '../../backend/api/pcs.php',
+                        type: 'PUT',
+                        data: JSON.stringify({ id: id, name: name }),
+                        contentType: 'application/json; charset=utf-8',
+                        dataType: 'json',
+                        success: function(){ $('#pcModal').modal('hide'); loadPCList(); },
+                        error: function(xhr){ alert('Gagal mengupdate PC'); console.error(xhr); }
+                    });
+                }
+            });
+
+            window.deletePC = function(id) {
+                if(confirm('Hapus PC ini?')) {
+                    $.ajax({
+                        url: '../../backend/api/pcs.php?id='+id,
+                        type: 'DELETE',
+                        dataType: 'json',
+                        success: function(){ loadPCList(); },
+                        error: function(xhr){ alert('Gagal menghapus PC'); console.error(xhr); }
+                    });
+                }
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 shadow">
+    <div class="container">
+        <a class="navbar-brand" href="index.html">WARNET MEMBER</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#userNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="userNav">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <a class="nav-link" id="nav-home" href="index.html">Dashboard & Beli Paket</a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" id="nav-history" href="history.html">History Transaksi</a>
+                </li>
+
+                <li class="nav-item ms-3">
+                    <button class="btn btn-outline-light btn-sm mt-1" onclick="logoutUser()">Logout</button>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<script>
+    function logoutUser() {
+        if(confirm('Keluar dari member area?')) {
+            localStorage.clear();
+            window.location.href = '../index.html';
+        }
+    }
+
+    $(document).ready(function() {
+        var path = window.location.pathname;
+        var page = path.split("/").pop();
+
+        if(page === 'index.html' || page === '') $('#nav-home').addClass('active');
+        if(page === 'history.html') $('#nav-history').addClass('active');
+    });
+</script>

@@ -1,0 +1,51 @@
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4 shadow-sm">
+    <div class="container-fluid">
+        <a class="navbar-brand fw-bold" href="index.html">WARNET ADMIN</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#adminNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="adminNav">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <a class="nav-link" id="nav-monitor" href="index.html">Monitoring PC</a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link" id="nav-users" href="users.html">Users</a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" id="nav-packages" href="packages.html">Paket Billing</a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" id="nav-pcs" href="pcs.html">Manajemen PC</a>
+                </li>
+            </ul>
+            <div class="d-flex">
+                <button class="btn btn-danger btn-sm" onclick="logout()">Logout</button>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<script>
+    // Script Logout Sederhana
+    function logout() {
+        if(confirm('Yakin ingin logout?')) {
+            localStorage.clear();
+            window.location.href = '../index.html';
+        }
+    }
+
+    // Highlight menu yang aktif berdasarkan URL saat ini
+    $(document).ready(function() {
+        var path = window.location.pathname;
+        var page = path.split("/").pop();
+        
+        if(page === 'index.html' || page === '') $('#nav-monitor').addClass('active');
+        if(page === 'users.html') $('#nav-users').addClass('active');
+        if(page === 'packages.html') $('#nav-packages').addClass('active');
+        if(page === 'pcs.html') $('#nav-pcs').addClass('active');
+    });
+</script>

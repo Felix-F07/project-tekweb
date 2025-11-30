@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Monitoring PC</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        .pc-card { cursor: pointer; transition: 0.3s; }
+        .pc-card:hover { transform: translateY(-5px); }
+        .status-available { background-color: #d1e7dd; border-color: #badbcc; color: #0f5132; }
+        .status-used { background-color: #f8d7da; border-color: #f5c2c7; color: #842029; }
+        .status-maintenance { background-color: #fff3cd; border-color: #ffecb5; color: #664d03; }
+    </style>
+</head>
+<body>
+    <div id="navbar-container"></div> <div class="container mt-4">
+        <h2>Monitoring Status PC</h2>
+        <div class="row" id="pcList">
+            </div>
+    </div>
+
+    <div class="modal fade" id="statusModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Ubah Status <span id="pcNameModal"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="pcIdModal">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-success btn-change-status" data-status="available">Set Available (Kosong)</button>
+                        <button class="btn btn-danger btn-change-status" data-status="used">Set Used (Dipakai)</button>
+                        <button class="btn btn-warning btn-change-status" data-status="maintenance">Set Maintenance (Rusak/Perbaikan)</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function(){
+            $("#navbar-container").load("navbar.html");
+            loadPC();
+
+            function loadPC() {
+                $.get('../../backend/api/pcs.php', function(data){
+                    let html = '';
+                    data.forEach(pc => {
+                        let statusClass = 'status-' + pc.status;
+                        html += `
+                        <div class="col-md-3 mb-4">
+                            <div class="card pc-card ${statusClass}" onclick="openModal(${pc.id}, '${pc.name}')">
+                                <div class="card-body text-center">
+                                    <h3 class="card-title">${pc.name}</h3>
+                                    <p class="card-text fw-bold text-uppercase">${pc.status}</p>
+                                </div>
+                            </div>
+                        </div>`;
+                    });
+                    $('#pcList').html(html);
+                });
+            }
+
+            window.openModal = function(id, name) {
+                $('#pcIdModal').val(id);
+                $('#pcNameModal').text(name);
+                $('#statusModal').modal('show');
+            }
+
+            $('.btn-change-status').click(function(){
+                let status = $(this).data('status');
+                let id = $('#pcIdModal').val();
+                
+                $.ajax({
+                    url: '../../backend/api/pcs.php',
+                    type: 'PUT',
+                    data: JSON.stringify({ id: id, status: status }),
+                    success: function(){
+                        $('#statusModal').modal('hide');
+                        loadPC();
+                    }
+                });
+            });
+            
+            // Auto refresh setiap 10 detik
+            setInterval(loadPC, 10000);
+        });
+    </script>
+</body>
+</html>
