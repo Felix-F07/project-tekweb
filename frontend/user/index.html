@@ -93,41 +93,161 @@
             // Disini kita gunakan list users dan filter (kurang efisien tapi simple untuk demo)
             let billingSeconds = 0; // current countdown value in seconds
             let billingTimer = null;
-            let syncInterval = 30000; // sync with server every 30s
+            let billingSyncTimer = null;
+            const SYNC_INTERVAL = 15000; // sync with server every 15 seconds
+
+            // Helper untuk simpan billing ke localStorage
+            function saveBillingToLocal() {
+                if (currentUserId) {
+                    localStorage.setItem('billing_seconds_' + currentUserId, billingSeconds);
+                    localStorage.setItem('billing_timestamp_' + currentUserId, Date.now());
+                    console.log('Saved to localStorage:', { billing_seconds: billingSeconds, timestamp: Date.now() });
+                }
+            }
+
+            // Helper untuk ambil billing dari localStorage
+            function getBillingFromLocal() {
+                if (!currentUserId) return null;
+                const savedSeconds = localStorage.getItem('billing_seconds_' + currentUserId);
+                const savedTimestamp = localStorage.getItem('billing_timestamp_' + currentUserId);
+                if (savedSeconds !== null && savedTimestamp !== null) {
+                    // Hitung berapa detik yang sudah berlalu sejak disimpan
+                    const elapsedSeconds = Math.floor((Date.now() - parseInt(savedTimestamp)) / 1000);
+                    const adjustedSeconds = Math.max(0, parseInt(savedSeconds) - elapsedSeconds);
+                    console.log('Retrieved from localStorage:', { saved: savedSeconds, elapsed: elapsedSeconds, adjusted: adjustedSeconds });
+                    return adjustedSeconds;
+                }
+                return null;
+            }
+
+            // Kirim billing ke server setiap 15 detik
+            function syncBillingToServer() {
+                if (!currentUserId) return;
+                
+                // Simpan ke localStorage terlebih dahulu
+                saveBillingToLocal();
+                
+                // Kirim ke database server
+                $.ajax({
+                    url: '../../backend/api/billing_sync.php',
+                    type: 'POST',
+                    data: JSON.stringify({ 
+                        user_id: currentUserId, 
+                        billing_seconds: billingSeconds 
+                    }),
+                    contentType: 'application/json; charset=UTF-8',
+                    dataType: 'json',
+                    success: function(res) {
+                        console.log('Billing synced to server:', res);
+                    },
+                    error: function(xhr, status, error) {
+                        let errorMsg = 'Unknown error';
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            errorMsg = response.message || response.error || error;
+                        } catch(e) {
+                            errorMsg = xhr.statusText || error;
+                        }
+                        console.error('Failed to sync billing:', errorMsg, 'Status:', xhr.status);
+                    }
+                });
+            }
 
             function startBillingTimer() {
                 if (billingTimer) clearInterval(billingTimer);
+                if (billingSyncTimer) clearInterval(billingSyncTimer);
+                
+                // Decrement billing setiap detik
                 billingTimer = setInterval(() => {
                     if (billingSeconds > 0) {
                         billingSeconds -= 1;
                         $('#billingTime').text(secondsToHms(billingSeconds));
+                        // Simpan ke localStorage setiap detik juga
+                        saveBillingToLocal();
                     }
                 }, 1000);
-                // periodic sync to server to refresh value (in case of concurrent updates)
-                setInterval(() => { fetchBillingFromServer(); }, syncInterval);
+
+                // Kirim ke server setiap 15 detik
+                billingSyncTimer = setInterval(() => {
+                    syncBillingToServer();
+                }, SYNC_INTERVAL);
             }
 
             function fetchBillingFromServer(){
                 $.get('../../backend/api/users.php', function(data){
-                    let user = data.find(u => u.id == currentUserId);
+                    let user = data.find(u => String(u.id) === String(currentUserId));
                     if(user) {
                         $('#usernameDisplay').text('User: ' + user.username);
-                        // Only override local countdown if server value differs by >5 seconds
+                        // Only override local countdown if server value is higher (user bought package)
                         const serverSec = parseInt(user.billing_seconds) || 0;
-                        if (Math.abs(serverSec - billingSeconds) > 5) {
+                        if (serverSec > billingSeconds) {
                             billingSeconds = serverSec;
                             $('#billingTime').text(secondsToHms(billingSeconds));
+                            saveBillingToLocal();
                         }
                     }
                 });
             }
 
             function loadUserData() {
+                if (!currentUserId) {
+                    console.error('User ID tidak ditemukan di localStorage');
+                    $('#usernameDisplay').text('User: Belum Login');
+                    return;
+                }
+
+                console.log('Loading user data for user ID:', currentUserId);
+                
+                // Cek localStorage dulu
+                const localBilling = getBillingFromLocal();
+                console.log('Local billing from localStorage:', localBilling);
+
                 $.get('../../backend/api/users.php', function(data){
-                    let user = data.find(u => u.id == currentUserId);
+                    console.log('Server response:', data);
+                    let user = data.find(u => String(u.id) === String(currentUserId));
+                    console.log('Found user:', user);
+                    
                     if(user) {
                         $('#usernameDisplay').text('User: ' + user.username);
-                        billingSeconds = parseInt(user.billing_seconds) || 0;
+                        const serverSeconds = parseInt(user.billing_seconds) || 0;
+                        
+                        console.log('Server seconds:', serverSeconds, 'Local seconds:', localBilling);
+                        
+                        // Gunakan nilai server jika lebih besar (user beli paket baru)
+                        // Atau gunakan localStorage jika ada dan lebih valid
+                        if (localBilling !== null) {
+                            if (serverSeconds > localBilling) {
+                                billingSeconds = serverSeconds;
+                                console.log('Using server value (higher):', serverSeconds);
+                            } else {
+                                billingSeconds = localBilling;
+                                console.log('Using local value:', localBilling);
+                            }
+                        } else {
+                            billingSeconds = serverSeconds;
+                            console.log('Using server value (no local):', serverSeconds);
+                        }
+                        
+                        $('#billingTime').text(secondsToHms(billingSeconds));
+                        saveBillingToLocal();
+                        startBillingTimer();
+                        syncBillingToServer();
+                    } else {
+                        console.error('User tidak ditemukan:', currentUserId);
+                        $('#usernameDisplay').text('User: Tidak Ditemukan');
+                        // Mulai timer dengan data lokal jika ada
+                        if (localBilling !== null) {
+                            billingSeconds = localBilling;
+                            $('#billingTime').text(secondsToHms(billingSeconds));
+                            startBillingTimer();
+                        }
+                    }
+                }).fail(function(xhr, status, error) {
+                    console.error('Gagal load user data:', error, status, xhr);
+                    $('#usernameDisplay').text('User: Error Loading');
+                    // Mulai timer dengan data lokal jika ada
+                    if (localBilling !== null) {
+                        billingSeconds = localBilling;
                         $('#billingTime').text(secondsToHms(billingSeconds));
                         startBillingTimer();
                     }
@@ -158,14 +278,16 @@
                     url: '../../backend/api/packages.php?action=buy',
                     type: 'POST',
                     data: JSON.stringify(payload),
+                    contentType: 'application/json; charset=UTF-8',
                     success: function(res){
                         alert(res.message);
                         $('#paymentModal').modal('hide');
-                            // Update local billingSeconds immediately (avoid waiting for sync)
-                            billingSeconds = (billingSeconds || 0) + parseInt(selectedPackage.seconds || 0);
-                            $('#billingTime').text(secondsToHms(billingSeconds));
-                            // also fetch fresh from server shortly
-                            setTimeout(fetchBillingFromServer, 1000);
+                        // Update local billingSeconds immediately
+                        billingSeconds = (billingSeconds || 0) + parseInt(selectedPackage.seconds || 0);
+                        $('#billingTime').text(secondsToHms(billingSeconds));
+                        // Simpan ke localStorage dan sync ke server segera
+                        saveBillingToLocal();
+                        syncBillingToServer();
                     }
                 });
             });
@@ -178,6 +300,31 @@
                 var s = Math.floor(d % 3600 % 60);
                 return ('0' + h).slice(-2) + ":" + ('0' + m).slice(-2) + ":" + ('0' + s).slice(-2);
             }
+
+            // Sinkronisasi saat halaman akan ditutup atau di-refresh
+            window.addEventListener('beforeunload', function() {
+                if (currentUserId) {
+                    saveBillingToLocal();
+                    // Gunakan sendBeacon untuk memastikan data terkirim
+                    if (navigator && navigator.sendBeacon) {
+                        const payload = JSON.stringify({ 
+                            user_id: currentUserId, 
+                            billing_seconds: billingSeconds 
+                        });
+                        const blob = new Blob([payload], { type: 'application/json' });
+                        navigator.sendBeacon('../../backend/api/billing_sync.php', blob);
+                    }
+                }
+            });
+
+            // Sinkronisasi saat tab/window kehilangan focus
+            document.addEventListener('visibilitychange', function() {
+                if (document.visibilityState === 'hidden') {
+                    console.log('Tab hidden, syncing billing...');
+                    saveBillingToLocal();
+                    syncBillingToServer();
+                }
+            });
         });
     </script>
 </body>
