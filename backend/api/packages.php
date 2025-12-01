@@ -2,7 +2,6 @@
 include_once '../configuration/database.php';
 $method = $_SERVER['REQUEST_METHOD'];
 
-// GET (List Paket Aktif)
 if ($method === 'GET') {
     try {
         $query = "SELECT * FROM paket_billing WHERE deleted_at IS NULL";
@@ -11,7 +10,6 @@ if ($method === 'GET') {
         echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
     } catch (PDOException $e) {
         if ($e->getCode() === '42S22') {
-            // column deleted_at not found, return all
             $q2 = "SELECT * FROM paket_billing";
             $s2 = $conn->prepare($q2);
             $s2->execute();
@@ -22,11 +20,8 @@ if ($method === 'GET') {
     }
 }
 
-// POST (Tambah Paket Baru / Beli Paket)
 if ($method === 'POST') {
-    // Cek apakah mode BELI (action=buy) atau TAMBAH (default)
     if(isset($_GET['action']) && $_GET['action'] == 'buy') {
-        // ... (Logika Beli Paket sama seperti sebelumnya) ...
         $data = json_decode(file_get_contents("php://input"));
         $qTrans = "INSERT INTO transactions (user_id, paket_id, billing_amount, seconds_added) VALUES (:uid, :pid, :amount, :sec)";
         $stmt = $conn->prepare($qTrans);
@@ -43,7 +38,6 @@ if ($method === 'POST') {
         $stmtU->execute();
         echo json_encode(["status" => "success", "message" => "Pembelian berhasil"]);
     } else {
-        // ADMIN: Tambah Paket Baru
         $data = json_decode(file_get_contents("php://input"));
         $query = "INSERT INTO paket_billing (name, price, seconds, description) VALUES (:name, :price, :seconds, :desc)";
         $stmt = $conn->prepare($query);
@@ -55,7 +49,6 @@ if ($method === 'POST') {
     }
 }
 
-// DELETE (Soft Delete Paket - Admin)
 if ($method === 'DELETE') {
     $id = $_GET['id'];
     try {

@@ -1,6 +1,5 @@
 <?php
-// Simple hash API for testing (returns bcrypt hash of provided password)
-// POST JSON: { "password": "..." }
+
 
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: POST, OPTIONS");

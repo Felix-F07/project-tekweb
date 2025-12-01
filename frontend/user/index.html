@@ -55,13 +55,11 @@
         let selectedPackage = null;
 
         $(document).ready(function(){
-                    // load shared navbar
                     $("#navbar-container").load("navbar.html");
 
                     loadPackages();
                     loadUserData();
 
-            // Load Data Paket
             function loadPackages() {
                 $.get('../../backend/api/packages.php', function(data){
                     let html = '';
@@ -88,15 +86,12 @@
                 });
             }
 
-            // Ambil data user spesifik (untuk refresh billing)
-            // Catatan: Idealnya buat endpoint khusus get_user_detail.php
-            // Disini kita gunakan list users dan filter (kurang efisien tapi simple untuk demo)
-            let billingSeconds = 0; // current countdown value in seconds
+
+            let billingSeconds = 0; 
             let billingTimer = null;
             let billingSyncTimer = null;
-            const SYNC_INTERVAL = 15000; // sync with server every 15 seconds
+            const SYNC_INTERVAL = 15000; 
 
-            // Helper untuk simpan billing ke localStorage
             function saveBillingToLocal() {
                 if (currentUserId) {
                     localStorage.setItem('billing_seconds_' + currentUserId, billingSeconds);
@@ -105,13 +100,11 @@
                 }
             }
 
-            // Helper untuk ambil billing dari localStorage
             function getBillingFromLocal() {
                 if (!currentUserId) return null;
                 const savedSeconds = localStorage.getItem('billing_seconds_' + currentUserId);
                 const savedTimestamp = localStorage.getItem('billing_timestamp_' + currentUserId);
                 if (savedSeconds !== null && savedTimestamp !== null) {
-                    // Hitung berapa detik yang sudah berlalu sejak disimpan
                     const elapsedSeconds = Math.floor((Date.now() - parseInt(savedTimestamp)) / 1000);
                     const adjustedSeconds = Math.max(0, parseInt(savedSeconds) - elapsedSeconds);
                     console.log('Retrieved from localStorage:', { saved: savedSeconds, elapsed: elapsedSeconds, adjusted: adjustedSeconds });
@@ -120,14 +113,11 @@
                 return null;
             }
 
-            // Kirim billing ke server setiap 15 detik
             function syncBillingToServer() {
                 if (!currentUserId) return;
                 
-                // Simpan ke localStorage terlebih dahulu
                 saveBillingToLocal();
                 
-                // Kirim ke database server
                 $.ajax({
                     url: '../../backend/api/billing_sync.php',
                     type: 'POST',
@@ -157,17 +147,14 @@
                 if (billingTimer) clearInterval(billingTimer);
                 if (billingSyncTimer) clearInterval(billingSyncTimer);
                 
-                // Decrement billing setiap detik
                 billingTimer = setInterval(() => {
                     if (billingSeconds > 0) {
                         billingSeconds -= 1;
                         $('#billingTime').text(secondsToHms(billingSeconds));
-                        // Simpan ke localStorage setiap detik juga
                         saveBillingToLocal();
                     }
                 }, 1000);
 
-                // Kirim ke server setiap 15 detik
                 billingSyncTimer = setInterval(() => {
                     syncBillingToServer();
                 }, SYNC_INTERVAL);
@@ -178,7 +165,6 @@
                     let user = data.find(u => String(u.id) === String(currentUserId));
                     if(user) {
                         $('#usernameDisplay').text('User: ' + user.username);
-                        // Only override local countdown if server value is higher (user bought package)
                         const serverSec = parseInt(user.billing_seconds) || 0;
                         if (serverSec > billingSeconds) {
                             billingSeconds = serverSec;
@@ -198,7 +184,6 @@
 
                 console.log('Loading user data for user ID:', currentUserId);
                 
-                // Cek localStorage dulu
                 const localBilling = getBillingFromLocal();
                 console.log('Local billing from localStorage:', localBilling);
 
@@ -213,8 +198,6 @@
                         
                         console.log('Server seconds:', serverSeconds, 'Local seconds:', localBilling);
                         
-                        // Gunakan nilai server jika lebih besar (user beli paket baru)
-                        // Atau gunakan localStorage jika ada dan lebih valid
                         if (localBilling !== null) {
                             if (serverSeconds > localBilling) {
                                 billingSeconds = serverSeconds;
@@ -235,7 +218,6 @@
                     } else {
                         console.error('User tidak ditemukan:', currentUserId);
                         $('#usernameDisplay').text('User: Tidak Ditemukan');
-                        // Mulai timer dengan data lokal jika ada
                         if (localBilling !== null) {
                             billingSeconds = localBilling;
                             $('#billingTime').text(secondsToHms(billingSeconds));
@@ -245,7 +227,6 @@
                 }).fail(function(xhr, status, error) {
                     console.error('Gagal load user data:', error, status, xhr);
                     $('#usernameDisplay').text('User: Error Loading');
-                    // Mulai timer dengan data lokal jika ada
                     if (localBilling !== null) {
                         billingSeconds = localBilling;
                         $('#billingTime').text(secondsToHms(billingSeconds));
@@ -254,7 +235,6 @@
                 });
             }
 
-            // Klik Beli -> Buka Modal
             $(document).on('click', '.btn-buy', function(){
                 selectedPackage = $(this).data();
                 $('#selectedPackageName').text(selectedPackage.name);
@@ -262,10 +242,8 @@
                 $('#paymentModal').modal('show');
             });
 
-            // Proses Bayar
             $('.btn-pay').click(function(){
                 const method = $(this).data('method');
-                // Disini logika QRIS/Kasir bisa dibedakan. Untuk demo, anggap sukses semua.
                 
                 const payload = {
                     user_id: currentUserId,
@@ -282,17 +260,14 @@
                     success: function(res){
                         alert(res.message);
                         $('#paymentModal').modal('hide');
-                        // Update local billingSeconds immediately
                         billingSeconds = (billingSeconds || 0) + parseInt(selectedPackage.seconds || 0);
                         $('#billingTime').text(secondsToHms(billingSeconds));
-                        // Simpan ke localStorage dan sync ke server segera
                         saveBillingToLocal();
                         syncBillingToServer();
                     }
                 });
             });
 
-            // Helper convert detik ke Jam:Menit:Detik
             function secondsToHms(d) {
                 d = Number(d);
                 var h = Math.floor(d / 3600);
@@ -301,11 +276,9 @@
                 return ('0' + h).slice(-2) + ":" + ('0' + m).slice(-2) + ":" + ('0' + s).slice(-2);
             }
 
-            // Sinkronisasi saat halaman akan ditutup atau di-refresh
             window.addEventListener('beforeunload', function() {
                 if (currentUserId) {
                     saveBillingToLocal();
-                    // Gunakan sendBeacon untuk memastikan data terkirim
                     if (navigator && navigator.sendBeacon) {
                         const payload = JSON.stringify({ 
                             user_id: currentUserId, 
@@ -317,7 +290,6 @@
                 }
             });
 
-            // Sinkronisasi saat tab/window kehilangan focus
             document.addEventListener('visibilitychange', function() {
                 if (document.visibilityState === 'hidden') {
                     console.log('Tab hidden, syncing billing...');

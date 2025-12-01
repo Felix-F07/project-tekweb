@@ -1,10 +1,8 @@
 <?php
-// billing_sync.php - Sinkronisasi billing ke database
 header('Content-Type: application/json');
 
 include_once '../configuration/database.php';
 
-// Ambil input JSON
 $input = json_decode(file_get_contents('php://input'), true);
 
 if (!$input) {
@@ -23,7 +21,6 @@ if ($user_id <= 0 || $billing_seconds === null || $billing_seconds < 0) {
 }
 
 try {
-    // Update billing_seconds di database (gunakan $conn, bukan $db)
     $sql = "UPDATE users SET billing_seconds = :billing_seconds WHERE id = :id";
     $stmt = $conn->prepare($sql);
     $stmt->bindParam(':billing_seconds', $billing_seconds, PDO::PARAM_INT);

@@ -4,8 +4,7 @@ include_once '../configuration/database.php';
 
 $data = json_decode(file_get_contents("php://input"));
 
-// --- DEBUG LOG (temporary) ---
-// Write a small debug entry for incoming login attempts. Remove when done.
+
 try {
     $logDir = __DIR__ . '/../logs';
     if (!is_dir($logDir)) @mkdir($logDir, 0755, true);
@@ -15,12 +14,11 @@ try {
     $entry = "[$now] LOGIN ATTEMPT - raw_body=" . str_replace("\n", '', $body);
     file_put_contents($logFile, $entry . PHP_EOL, FILE_APPEND);
 } catch (Exception $e) {
-    // ignore logging errors
+
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Try selecting user excluding soft-deleted rows. If the DB schema doesn't
-    // have `deleted_at` column we catch the exception and retry without it.
+
     $user = false;
     $query = "SELECT * FROM users WHERE username = :username AND deleted_at IS NULL LIMIT 1";
     try {
@@ -29,7 +27,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute();
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
-        // If error is 'column not found' (SQLSTATE 42S22) then retry without deleted_at
         if ($e->getCode() === '42S22') {
             try {
                 $query2 = "SELECT * FROM users WHERE username = :username LIMIT 1";
@@ -38,22 +35,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt2->execute();
                 $user = $stmt2->fetch(PDO::FETCH_ASSOC);
             } catch (PDOException $e2) {
-                // fallback: set user false and continue to error handling below
                 $user = false;
             }
         } else {
-            // Re-throw unexpected DB errors to surface them during development
             throw $e;
         }
     }
-    // Verifikasi Hash Password
     $ok = false;
 
     if ($user && password_verify($data->password, $user['password'])) {
-        // Password already hashed and verified
         $ok = true;
     } elseif ($user && isset($user['password']) && $data->password === $user['password']) {
-        // Fallback: DB contains plaintext password (seed). Re-hash it and update DB.
         $newHash = password_hash($data->password, PASSWORD_BCRYPT);
         $up = $conn->prepare("UPDATE users SET password = :pw WHERE id = :id");
         $up->bindParam(':pw', $newHash);

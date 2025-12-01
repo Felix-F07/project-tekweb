@@ -3,7 +3,6 @@ include_once '../configuration/database.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 
-// GET: Ambil semua PC
 if ($method === 'GET') {
     $query = "SELECT * FROM pc ORDER BY id ASC";
     $stmt = $conn->prepare($query);
@@ -11,7 +10,6 @@ if ($method === 'GET') {
     echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
 }
 
-// POST: Tambah PC Baru
 if ($method === 'POST') {
     $data = json_decode(file_get_contents("php://input"));
     $query = "INSERT INTO pc (name, status) VALUES (:name, 'available')";
@@ -22,11 +20,10 @@ if ($method === 'POST') {
     else echo json_encode(["message" => "Gagal"]);
 }
 
-// PUT: Update Status PC (Untuk Monitoring) / Edit Nama
+
 if ($method === 'PUT') {
     $data = json_decode(file_get_contents("php://input"));
     
-    // Cek mau update status atau nama
     if(isset($data->status)) {
         $query = "UPDATE pc SET status = :status WHERE id = :id";
         $stmt = $conn->prepare($query);
@@ -41,7 +38,6 @@ if ($method === 'PUT') {
     if($stmt->execute()) echo json_encode(["message" => "Update Berhasil"]);
 }
 
-// DELETE: Hapus PC
 if ($method === 'DELETE') {
     $id = $_GET['id'];
     $query = "DELETE FROM pc WHERE id = :id";

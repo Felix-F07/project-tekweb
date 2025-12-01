@@ -30,7 +30,6 @@
 </nav>
 
 <script>
-    // Script Logout Sederhana
     function logout() {
         if(confirm('Yakin ingin logout?')) {
             localStorage.clear();
@@ -38,7 +37,6 @@
         }
     }
 
-    // Highlight menu yang aktif berdasarkan URL saat ini
     $(document).ready(function() {
         var path = window.location.pathname;
         var page = path.split("/").pop();

@@ -45,7 +45,6 @@
                 $.get('../../backend/api/packages.php', function(data){
                     let rows = '';
                     data.forEach(p => {
-                        // convert seconds to minutes (show decimal if not divisible)
                         let minutes = (parseInt(p.seconds) / 60);
                         let minutesLabel = Number.isInteger(minutes) ? minutes + ' menit' : minutes.toFixed(2) + ' menit';
                         rows += `<tr>
@@ -62,7 +61,6 @@
 
             $('#formPkg').submit(function(e){
                 e.preventDefault();
-                // Convert minutes input to seconds for backend
                 const minutes = parseFloat($('#pSec').val());
                 const seconds = Math.max(0, Math.round(minutes * 60));
                 let data = {

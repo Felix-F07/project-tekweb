@@ -43,7 +43,6 @@
 
             $.get('../../backend/api/transactions.php?user_id=' + userId, function(data){
                 let rows = '';
-                // helper: convert seconds to HH:MM:SS
                 function formatSeconds(sec){
                     sec = parseInt(sec) || 0;
                     const hours = Math.floor(sec / 3600);
