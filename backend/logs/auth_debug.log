@@ -5,3 +5,7 @@
 [2025-11-30 16:02:40] LOGIN ATTEMPT - raw_body={"username":"admin","password":"admin123"}
 [2025-11-30 16:17:43] LOGIN ATTEMPT - raw_body={"username":"kenji","password":"123"}
 [2025-11-30 17:20:42] LOGIN ATTEMPT - raw_body={"username":"kenji","password":"123"}
+[2025-12-01 09:13:57] LOGIN ATTEMPT - raw_body={"username":"admin","password":"admin123"}
+[2025-12-01 09:15:01] LOGIN ATTEMPT - raw_body={"username":"Kenji","password":"123"}
+[2025-12-01 09:15:35] LOGIN ATTEMPT - raw_body={"username":"admin","password":"admin123"}
+[2025-12-01 09:17:06] LOGIN ATTEMPT - raw_body={"username":"Kenji","password":"123"}
